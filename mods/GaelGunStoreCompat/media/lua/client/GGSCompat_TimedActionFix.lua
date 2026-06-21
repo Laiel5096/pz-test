@@ -11,14 +11,19 @@
     unrelated vanilla and other-mod timed actions. That is why GGS appears to
     "conflict" with other gun mods: it breaks every mod's timed actions, not its own.
 
-    This patch reinstalls a clean begin() that keeps GGS's protective character
-    guard but calls vanilla begin() directly, without pcall.
+    This patch installs a "vanilla-shaped fallback" begin() -- a reimplementation of
+    the vanilla begin() flow (it does NOT recover the original vanilla function
+    pointer) that keeps GGS's protective character guard but runs without pcall.
+
+    Trade-off: while GGS is active we replace whatever begin() is installed with the
+    fallback. If another mod has legitimately wrapped ISBaseTimedAction:begin(), that
+    wrapper is dropped. Removing GGS's call-frame corruption takes priority.
 
     Scope is deliberately narrow: only begin() is touched. perform()/stop() are
     left alone. The patch is inert unless GGS is active.
 
-    Standalone re-implementation; behavior modeled on CommonSenseReborn's
-    CSR_GaelGunStoreCompat.lua.
+    Credit: independent reimplementation; structure inspired by CommonSenseReborn's
+    CSR_GaelGunStoreCompat.lua (mitcaka / FADED). No code copied verbatim. As-is.
 ]]
 
 require "TimedActions/ISBaseTimedAction"
@@ -60,13 +65,23 @@ end
 
 local _ggsActiveAtLoad = isGGSActive()
 local _capturedBegin = ISBaseTimedAction and ISBaseTimedAction.begin or nil
-local _capturedWasUnsafe = ISBaseTimedAction
-    and ISBaseTimedAction.__ggsBeginGuard
-    and _capturedBegin ~= nil
 
--- If the begin() captured at load is GGS's unsafe wrapper, fall back to a fresh
--- vanilla-shaped begin(); otherwise keep whatever clean begin() was installed.
-local _rawCleanBegin = _capturedWasUnsafe and vanillaBegin or _capturedBegin
+-- Treat the begin() captured at load as unsafe if the guard marker is set, if its
+-- source looks like GGS, OR if GGS is active at load. The last condition matters
+-- because we load after GGS (require=GaelGunStore_B42): the captured begin() is
+-- almost certainly GGS's wrapper, and it holds even when Kahlua's debug.getinfo
+-- exposes no source for isGGSSource() to inspect.
+local _capturedLooksUnsafe =
+    _capturedBegin ~= nil
+    and (
+        (ISBaseTimedAction and ISBaseTimedAction.__ggsBeginGuard)
+        or isGGSSource(_capturedBegin)
+        or _ggsActiveAtLoad
+    )
+
+-- If the captured begin() looks unsafe, use the vanilla-shaped fallback; otherwise
+-- keep whatever clean begin() was already installed.
+local _rawCleanBegin = _capturedLooksUnsafe and vanillaBegin or _capturedBegin
 
 -- Preserve GGS's protective character guard without the pcall.
 local function guardedCleanBegin(self, ...)
@@ -95,8 +110,13 @@ local function shouldRestoreBegin()
     if ISBaseTimedAction.begin == _cleanBegin then
         return false
     end
-    -- GGS was active at load and begin() still points at the raw captured one.
-    if _ggsActiveAtLoad and ISBaseTimedAction.begin == _rawCleanBegin then
+    -- GGS's unsafe wrapper was captured at load and is still installed. _rawCleanBegin
+    -- is now the vanilla-shaped fallback, so we must compare against _capturedBegin,
+    -- not _rawCleanBegin. This guarantees the swap even without debug.getinfo/marker.
+    if _ggsActiveAtLoad
+        and _capturedLooksUnsafe
+        and ISBaseTimedAction.begin == _capturedBegin
+    then
         return true
     end
     -- begin() now looks like it came from GGS's files.
@@ -124,8 +144,12 @@ local function restoreCleanBegin(reason)
     end
 end
 
+-- One-shot diagnostic so logs show which path was taken.
+print("[GGSCompat] GGS active at load=" .. tostring(_ggsActiveAtLoad)
+    .. ", captured looks unsafe=" .. tostring(_capturedLooksUnsafe))
+
 -- If we load before GGS, claim the guard so GGS does not install its unsafe wrapper.
-if ISBaseTimedAction and _ggsActiveAtLoad and not _capturedWasUnsafe then
+if ISBaseTimedAction and _ggsActiveAtLoad and not _capturedLooksUnsafe then
     markGGSGuardOwned()
 end
 

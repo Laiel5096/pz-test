@@ -47,10 +47,11 @@ errors on-screen. To confirm the patch:
 
 ## Load order
 
-The pack runs **#48 Mod Load Order Sorter (`3423660713`)**. This patch's `mod.info` declares
-`require=GaelGunStore_B42`, which forces it to load **after** GaelGunStore regardless of the
-sorter. No manual ordering is needed, but if you pin order by hand, keep
-`GaelGunStoreCompat` after `GaelGunStore_B42`.
+The pack runs **#48 Mod Load Order Sorter (`3423660713`)**, and this patch's `mod.info`
+declares `require=GaelGunStore_B42` as a backup. Even so, **pin the order explicitly** in
+the `Mods=` line — keep `GaelGunStoreCompat` after `GaelGunStore_B42`
+(`Mods=...;GaelGunStore_B42;GaelGunStoreCompat`). While you are debugging, do not rely on the
+sorter or `require=` alone; an explicit order is easier to verify for a local mod.
 
 ## Linux case-sensitivity in this pack
 
@@ -71,11 +72,14 @@ tools/pz-lowercase-fix.sh --apply ~/.steam/steamapps/workshop/content/108600/361
 It only adds lowercase symlinks (no rename/delete), so it coexists with #93/#94 and survives
 Workshop updates.
 
-## Other gun mods — item/sandbox overlaps (low priority, unverified)
+## Other gun mods — conflicts NOT addressed here
 
-These also add firearms/attachments and *could* share item IDs or sandbox-option keys with
-GaelGunStore, but none are known to crash — the only hard failure is the timed-action
-corruption fixed above:
+TimedAction corruption is the only issue this patch targets. GaelGunStore replaces vanilla
+firearms and ammunition wholesale, so it may still conflict with the other firearm mods
+through **vanilla firearm/ammo overrides, loot tables, recipes, sandbox options, attachment
+systems, and item IDs**. These are not merely cosmetic — they can surface as broken looting,
+ammo, reloading, attachment UI, crafting, or item conversion. None of it is fixed here, and
+each needs separate testing:
 
 - #9 [42] Vanilla Firearms Expansion (`3611718925`)
 - #44 US Military Pack (`612100872`)
@@ -83,6 +87,9 @@ corruption fixed above:
 - #89 RAF - Real Automatic Firerate (`3634727573`, deprecated)
 - #34 Vanilla Gear Expanded (`3401134276`)
 - #8 Hot Brass (`3610677934`)
+
+If you observe a specific in-game conflict (duplicate item, broken recipe, ammo mismatch),
+report the exact pair and a targeted de-conflict can be added separately.
 
 If you see duplicate item names or duplicate sandbox-option labels in-game, send the specific
 pair and a targeted de-conflict script can be added. This is cosmetic, not a crash, so it is
