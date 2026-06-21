@@ -1,5 +1,29 @@
 # Changelog
 
+## v1.2
+
+**Build 42 packaging normalization. No Lua logic changes** — the runtime fix from v1.1 is
+byte-identical, only relocated.
+
+### Changed
+- Re-packaged the mod into the required **B42 per-version layout**. The old flat layout
+  (`mods/GaelGunStoreCompat/mod.info` + `media/` at the root) can be invisible to the B42
+  loader for local mods.
+  - `mod.info` → `mods/GaelGunStoreCompat/42/mod.info`
+  - runtime Lua → `mods/GaelGunStoreCompat/42/media/lua/client/GGSCompat_TimedActionFix.lua`
+  - added empty `mods/GaelGunStoreCompat/common/` (lowercase — required on the Linux server),
+    tracked via `.gitkeep`.
+- `mod.info`: `modversion=1.1 → 1.2`. `id`, `require`, `versionMin` unchanged, so the
+  `Mods=...;GaelGunStoreCompat` line and load order are unaffected.
+- Docs (`README.md`, `docs/install.md`) updated to the `42/` + `common/` layout, including the
+  lowercase-`common` note and a fallback tip (a root `mod.info` copy, as CommonSenseReborn ships)
+  if the mod still does not appear in the B42 mod list.
+
+### Added
+- `tools/package-ggscompat.sh` — builds `dist/GaelGunStoreCompat/` (optionally a `.zip`) and
+  asserts the B42 layout (42/mod.info, 42/media/..., common/, no stray root files) so the wrong
+  structure can't be shipped by mistake. `dist/` is git-ignored.
+
 ## v1.1
 
 Review-driven fixes. The headline change is a **correctness fix** to the runtime patch.

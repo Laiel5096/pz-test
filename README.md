@@ -56,14 +56,22 @@ never edits the Workshop mod's files (update-safe), and touches `begin()` only.
 ## 구성 / Contents
 
 ```
-mods/GaelGunStoreCompat/
-  mod.info
-  media/lua/client/GGSCompat_TimedActionFix.lua   # 핵심 수정 / the runtime fix
+mods/GaelGunStoreCompat/                           # B42 구조 / B42 layout
+  common/                                          # 비어 있음(소문자 필수) / empty, lowercase
+  42/
+    mod.info
+    media/lua/client/GGSCompat_TimedActionFix.lua  # 핵심 수정 / the runtime fix
 tools/pz-lowercase-fix.sh                          # 리눅스 대소문자 보정 도구 / Linux case helper
+tools/package-ggscompat.sh                         # 배포본 빌드/검증 / build & verify dist
 docs/install.md                                    # 설치 안내 / install guide
 docs/collection-notes.md                           # 97개 모드 분석 / collection analysis
 CHANGELOG.md                                       # 변경 이력 / changelog
 ```
+
+> **B42 구조 / Build 42 layout:** 이 모드는 B42 규격대로 `42/`(mod.info·media)와 `common/`
+> (빈 폴더) 하위 구조를 씁니다. 평면 구조(루트에 mod.info·media)는 B42 로더가 로컬 모드를 인식하지
+> 못할 수 있습니다. This mod uses the required B42 per-version layout (`42/` holds mod.info + media,
+> `common/` is an empty companion folder); the old flat layout can be invisible to the B42 loader.
 
 ## 설치 / Install
 

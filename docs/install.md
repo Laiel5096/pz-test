@@ -30,13 +30,21 @@ removing GaelGunStore's call-frame corruption takes priority.
 
 ## 1. Server (GCP Ubuntu 24.04 LTS)
 
-1. Copy the mod folder to the server profile's `mods/` directory:
+1. Copy the mod folder to the server profile's `mods/` directory, keeping the
+   **Build 42 layout** intact:
 
    ```
    ~/Zomboid/mods/GaelGunStoreCompat/
+     common/                                       # empty companion folder (lowercase!)
+     42/
+       mod.info
+       media/lua/client/GGSCompat_TimedActionFix.lua
    ```
 
-   (The folder must contain `mod.info` and `media/lua/client/GGSCompat_TimedActionFix.lua`.)
+   On the Linux server the `common` folder name **must be lowercase**. Do not flatten this
+   into `mods/GaelGunStoreCompat/mod.info` + `media/` — the B42 loader may not detect a flat
+   local mod. (Tip: build the folder with `tools/package-ggscompat.sh`, which verifies the
+   layout for you.)
 
 2. Edit the server config (e.g. `~/Zomboid/Server/servertest.ini`). On the `Mods=`
    line, add `GaelGunStoreCompat` **after** `GaelGunStore_B42`:
@@ -58,14 +66,21 @@ A dedicated server only auto-downloads **Workshop** mods to clients. Because thi
 patch is a local mod, **each player must install it manually** or they will fail
 the mod check / not get the fix:
 
-1. Copy the same `GaelGunStoreCompat` folder to:
+1. Copy the same `GaelGunStoreCompat` folder (with its `common/` and `42/` subfolders) to:
 
    ```
    %USERPROFILE%\Zomboid\mods\GaelGunStoreCompat\
+     common\
+     42\
+       mod.info
+       media\lua\client\GGSCompat_TimedActionFix.lua
    ```
 
 2. Enable it in the in-game Mods menu (or it is pulled in by the server's mod list
-   on join). Make sure it loads **after** GaelGunStore.
+   on join). Make sure it loads **after** GaelGunStore. If the mod does not appear in the
+   B42 mod list at all, the layout is wrong — recheck the `42/` + `common/` structure above.
+   (As a last-resort fallback some mods also place a copy of `mod.info` at the mod root, like
+   CommonSenseReborn does; try that only if the correct layout still won't show.)
 
 > If you would rather not hand it to every player, upload this folder as your own
 > Workshop item and add its id to `WorkshopItems=` instead. The mod contents are
