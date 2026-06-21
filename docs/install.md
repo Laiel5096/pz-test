@@ -73,6 +73,16 @@ In the client console / `console.txt` you should see, once per session:
 If GaelGunStore is **not** enabled, the patch stays inert and prints nothing — that
 is expected.
 
+Behavioral check (no patch vs patch): the GaelGunStore bug makes **gates/doors open then
+immediately close on `E` press**, and other mods' timed actions (Run and Reload, Fast Knifing,
+Vehicle Repair Overhaul, Project Cook, etc.) throw `callFrame ... null` / `ReturnValues.put`
+errors after a GaelGunStore action. Your collection already includes **errorMagnifier**
+(`2896041179`), which shows those errors on-screen — they should disappear once the patch is
+active. See [`collection-notes.md`](collection-notes.md) for the full breakdown.
+
+Because your pack runs **Mod Load Order Sorter** (`3423660713`), no manual ordering is needed:
+the `require=GaelGunStore_B42` line forces this patch to load after GaelGunStore regardless.
+
 ## 4. Legacy GaelGunStore build
 
 If your server runs the legacy pack (`GaelGunStore_Leagacy`, Workshop `3623297453`)

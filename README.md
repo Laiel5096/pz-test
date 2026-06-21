@@ -60,15 +60,31 @@ docs/install.md                                    # 설치 안내 / install gui
 > **Important:** a dedicated server does not auto-distribute local (non-Workshop) mods.
 > Install the folder on the server **and** on every Windows client. See the install guide.
 
+## 이 모드팩에서 / In this collection (97 mods)
+
+컬렉션(`3746021319`) 분석 결과 — 자세한 내용은 [`docs/collection-notes.md`](docs/collection-notes.md):
+
+- **패치 필요 확정**: 이 팩에는 GaelGunStore의 `begin()` 버그를 고치는 모드가 없습니다(원본
+  Common Sense 계열만 있고 CommonSenseReborn은 없음). → 이 패치가 반드시 필요합니다.
+- **가장 큰 영향**: Run and Reload, Fast Knifing, Better Auto Mechanics, Vehicle Repair
+  Overhaul, Project Cook 등 **타임드 액션을 쓰는 모든 모드** + 바닐라(특히 **E키로 문/대문이
+  열렸다 바로 닫히는** 증상)가 이 버그로 깨지며, 패치가 전역으로 복구합니다.
+- **검증 도구 내장**: 팩에 errorMagnifier(`2896041179`)가 있어, 패치 적용 전후로
+  `callFrame ... null` / `ReturnValues.put` 오류가 사라지는지 화면에서 바로 확인 가능합니다.
+- **리눅스 대소문자**: 팩에 PZ B42 Linux Case Fix(`3728891707`)와 RAF B42 Linux Case
+  Fix(`3728837648`)가 이미 있습니다. GaelGunStore 전용 케이스 픽스는 없으므로, 서버 로그에
+  GaelGunStore 에셋 누락이 남으면 아래 도구를 GaelGunStore 워크샵 폴더에 적용하세요.
+
 ## 리눅스 대소문자 / Linux case-sensitivity
 
 이 패치의 파일은 모두 소문자로 통일되어 있어 리눅스에서 문제를 일으키지 않습니다. 다른 총기
 모드의 텍스처/사운드가 서버에서 누락되면(클라이언트는 정상인데 서버 로그에 file not found),
 `tools/pz-lowercase-fix.sh`로 해당 모드 폴더에 소문자 심볼릭 링크를 만들 수 있습니다. 파일을
-이름 변경/삭제하지 않으므로 워크샵 재다운로드에도 안전합니다.
+이름 변경/삭제하지 않으므로 워크샵 재다운로드 및 팩의 케이스 픽스 모드와 함께 써도 안전합니다.
 
 ## 범위 밖 / Out of scope (for now)
 
-컬렉션(`3746021319`)의 개별 모드별 아이템 ID·샌드박스 옵션 키·전리품 테이블 충돌 정리는,
-컬렉션 모드 목록이 확인되면 별도 스크립트로 추가할 수 있습니다. 핵심 타임드 액션 수정은 컬렉션
+개별 총기 모드(Vanilla Firearms Expansion, US Military Pack, Simple Silencers 등)와의
+아이템 ID·샌드박스 옵션 키 중복 정리는 크래시가 아닌 표시상 문제이며, 구체적인 충돌 쌍을
+알려주시면 별도 de-conflict 스크립트로 추가할 수 있습니다. 핵심 타임드 액션 수정은 컬렉션
 내용과 무관하게 동작합니다.
