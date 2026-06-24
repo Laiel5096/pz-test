@@ -1,8 +1,11 @@
-# GaelGunStore Compatibility Patch (Project Zomboid B42)
+# GaelGunStore TimedAction Stabilizer (Project Zomboid B42)
 
-로컬 호환 패치 모드 — GaelGunStore와 다른 총기 모드들을 함께 쓸 수 있게 만듭니다.
-A local compatibility mod that lets **GaelGunStore** coexist with other gun mods on
-**Project Zomboid Build 42**.
+로컬 안정화 패치 — GaelGunStore의 unsafe `ISBaseTimedAction:begin` 래퍼가 일으키는
+**전역 타임드 액션 오류**를 완화합니다. 총기/탄약/루팅/아이템 ID 충돌까지 해결하지는 **않습니다.**
+A local patch that mitigates the **global timed-action corruption** caused by GaelGunStore's
+unsafe `ISBaseTimedAction:begin` wrapper on **Project Zomboid Build 42**. It does **not** fix
+firearm/ammo overrides, loot tables, recipes, sandbox options, attachment UI, or item-ID
+clashes between GaelGunStore and other gun mods.
 
 - 서버 / Server: GCP Ubuntu 24.04 LTS (dedicated)
 - 클라이언트 / Client: Windows
@@ -29,23 +32,46 @@ GaelGunStore appears to conflict with other gun mods.
 
 ## 해결 / The fix
 
-타임드 액션이 깨지지 않도록, GaelGunStore의 캐릭터 보호 가드는 유지하되 `pcall` 없이 바닐라
-`begin()`을 직접 호출하는 깨끗한 `begin()`을 다시 설치합니다. GaelGunStore가 켜져 있을 때만
-동작하며, 워크샵 모드 파일은 전혀 수정하지 않습니다(업데이트 안전).
+GaelGunStore의 캐릭터 보호 가드는 유지하되 `pcall` 없이 동작하는 **vanilla-shaped fallback**
+`begin()`(바닐라 begin 흐름을 재구현한 것 — 원본 함수 포인터를 복구하는 게 아님)을 설치합니다.
+GaelGunStore가 켜져 있을 때만 동작하고, 워크샵 모드 파일은 전혀 수정하지 않습니다(업데이트 안전).
+범위는 좁게 `begin()`만 건드립니다.
 
-The patch reinstalls a clean `begin()` that keeps GaelGunStore's character guard but drops
-the `pcall`. It only activates when GaelGunStore is enabled and never edits the Workshop
-mod's files (update-safe). Scope is narrow — only `begin()` is touched.
+The patch installs a **vanilla-shaped fallback** `begin()` (a reimplementation of the vanilla
+begin flow — it does not recover the original function pointer) that keeps GaelGunStore's
+character guard but runs without `pcall`. It activates only when GaelGunStore is enabled,
+never edits the Workshop mod's files (update-safe), and touches `begin()` only.
+
+> **Trade-off / 주의:** GaelGunStore가 활성화된 동안 이 패치는 설치된 `begin()`을 fallback으로
+> **교체**합니다. 만약 다른 모드가 `ISBaseTimedAction:begin()`을 정상적으로 감싸고 있었다면 그
+> 래퍼는 사라집니다. GGS의 콜 프레임 오염 제거를 우선하기 위한 감수 가능한 선택입니다.
+> While GaelGunStore is active, this patch **replaces** the installed `begin()`. If another mod
+> had legitimately wrapped `ISBaseTimedAction:begin()`, that wrapper is dropped — an accepted
+> trade-off, since removing GaelGunStore's corruption takes priority.
+
+> **대상 / Scope:** `GaelGunStore_B42` 전용입니다. 레거시 팩(`GaelGunStore_Leagacy`,
+> `3623297453`)은 **지원하지 않습니다.** Targets `GaelGunStore_B42` only; the legacy pack is
+> **not supported**.
 
 ## 구성 / Contents
 
 ```
-mods/GaelGunStoreCompat/
-  mod.info
-  media/lua/client/GGSCompat_TimedActionFix.lua   # 핵심 수정 / the runtime fix
+mods/GaelGunStoreCompat/                           # B42 구조 / B42 layout
+  common/                                          # 비어 있음(소문자 필수) / empty, lowercase
+  42/
+    mod.info
+    media/lua/client/GGSCompat_TimedActionFix.lua  # 핵심 수정 / the runtime fix
 tools/pz-lowercase-fix.sh                          # 리눅스 대소문자 보정 도구 / Linux case helper
+tools/package-ggscompat.sh                         # 배포본 빌드/검증 / build & verify dist
 docs/install.md                                    # 설치 안내 / install guide
+docs/collection-notes.md                           # 97개 모드 분석 / collection analysis
+CHANGELOG.md                                       # 변경 이력 / changelog
 ```
+
+> **B42 구조 / Build 42 layout:** 이 모드는 B42 규격대로 `42/`(mod.info·media)와 `common/`
+> (빈 폴더) 하위 구조를 씁니다. 평면 구조(루트에 mod.info·media)는 B42 로더가 로컬 모드를 인식하지
+> 못할 수 있습니다. This mod uses the required B42 per-version layout (`42/` holds mod.info + media,
+> `common/` is an empty companion folder); the old flat layout can be invisible to the B42 loader.
 
 ## 설치 / Install
 
@@ -60,15 +86,43 @@ docs/install.md                                    # 설치 안내 / install gui
 > **Important:** a dedicated server does not auto-distribute local (non-Workshop) mods.
 > Install the folder on the server **and** on every Windows client. See the install guide.
 
+## 이 모드팩에서 / In this collection (97 mods)
+
+컬렉션(`3746021319`) 분석 결과 — 자세한 내용은 [`docs/collection-notes.md`](docs/collection-notes.md):
+
+- **패치 필요 확정**: 이 팩에는 GaelGunStore의 `begin()` 버그를 고치는 모드가 없습니다(원본
+  Common Sense 계열만 있고 CommonSenseReborn은 없음). → 이 패치가 반드시 필요합니다.
+- **가장 큰 영향**: Run and Reload, Fast Knifing, Better Auto Mechanics, Vehicle Repair
+  Overhaul, Project Cook 등 **타임드 액션을 쓰는 모든 모드** + 바닐라(특히 **E키로 문/대문이
+  열렸다 바로 닫히는** 증상)가 이 버그로 깨지며, 패치가 전역으로 복구합니다.
+- **검증 도구 내장**: 팩에 errorMagnifier(`2896041179`)가 있어, 패치 적용 전후로
+  `callFrame ... null` / `ReturnValues.put` 오류가 사라지는지 화면에서 바로 확인 가능합니다.
+- **리눅스 대소문자**: 팩에 PZ B42 Linux Case Fix(`3728891707`)와 RAF B42 Linux Case
+  Fix(`3728837648`)가 이미 있습니다. GaelGunStore 전용 케이스 픽스는 없으므로, 서버 로그에
+  GaelGunStore 에셋 누락이 남으면 아래 도구를 GaelGunStore 워크샵 폴더에 적용하세요.
+
 ## 리눅스 대소문자 / Linux case-sensitivity
 
 이 패치의 파일은 모두 소문자로 통일되어 있어 리눅스에서 문제를 일으키지 않습니다. 다른 총기
 모드의 텍스처/사운드가 서버에서 누락되면(클라이언트는 정상인데 서버 로그에 file not found),
 `tools/pz-lowercase-fix.sh`로 해당 모드 폴더에 소문자 심볼릭 링크를 만들 수 있습니다. 파일을
-이름 변경/삭제하지 않으므로 워크샵 재다운로드에도 안전합니다.
+이름 변경/삭제하지 않으므로 워크샵 재다운로드 및 팩의 케이스 픽스 모드와 함께 써도 안전합니다.
 
-## 범위 밖 / Out of scope (for now)
+단, 이 도구는 **실제 이름에 대문자가 있고 참조가 소문자인 경우**(예: 실제 `AnimSets` → 참조
+`animsets`)만 완화합니다. 반대 방향(실제 `animsets` → 참조 `AnimSets`)은 기본 스캔으로는 잡지
+못하므로 서버 로그 기반으로 별도 alias가 필요합니다. Note: the tool only aliases when the real
+name **contains uppercase** and the reference is lowercase; the reverse direction is not covered
+by the scan.
 
-컬렉션(`3746021319`)의 개별 모드별 아이템 ID·샌드박스 옵션 키·전리품 테이블 충돌 정리는,
-컬렉션 모드 목록이 확인되면 별도 스크립트로 추가할 수 있습니다. 핵심 타임드 액션 수정은 컬렉션
-내용과 무관하게 동작합니다.
+## 범위 밖 / Out of scope
+
+이 패치가 다루는 건 **타임드 액션 오염 하나뿐**입니다. GaelGunStore는 바닐라 총기/탄약을 전부
+교체하므로, 다른 총기 모드(Vanilla Firearms Expansion, Hot Brass, RAF, Simple Silencers,
+US Military Pack, Vanilla Gear Expanded 등)와는 바닐라 총기/탄약 override, 루팅 테이블, 제작
+레시피, 샌드박스 옵션, 부착물 시스템, 아이템 ID 등에서 여전히 충돌할 수 있습니다. 이는 단순
+표시 문제가 아니라 실제 동작 문제로 번질 수 있으며, 여기서 해결하지 않습니다(별도 테스트 필요).
+
+TimedAction corruption is the only issue this patch targets. Other firearm mods may still
+conflict with GaelGunStore through vanilla firearm/ammo overrides, loot tables, recipes,
+sandbox options, attachment systems, and item IDs. Those are not fixed here and require
+separate testing. 구체적인 충돌 쌍을 알려주시면 별도 de-conflict 작업을 추가할 수 있습니다.

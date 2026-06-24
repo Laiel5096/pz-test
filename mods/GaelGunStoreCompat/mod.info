@@ -1,7 +1,0 @@
-name=GaelGunStore Compatibility Patch
-id=GaelGunStoreCompat
-description=Neutralizes GaelGunStore's broken ISBaseTimedAction:begin() pcall wrapper so it stops corrupting other mods' timed actions. Build 42.
-author=laiel5096
-modversion=1.0
-versionMin=42.0
-require=GaelGunStore_B42

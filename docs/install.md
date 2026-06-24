@@ -1,4 +1,4 @@
-# GaelGunStore Compatibility Patch — Install Guide
+# GaelGunStore TimedAction Stabilizer — Install Guide
 
 This is a **local** (non-Workshop) mod. Read the distribution note carefully: a
 dedicated server does **not** push local mods to clients automatically.
@@ -16,18 +16,35 @@ Cannot assign field "callFrame" because "a" is null
 ```
 
 This is why GaelGunStore seems to "conflict with other gun mods" — it breaks every
-mod's timed actions, not just its own. The patch reinstalls a clean `begin()` that
-keeps GaelGunStore's character guard but drops the `pcall`.
+mod's timed actions, not just its own. The patch installs a **vanilla-shaped fallback**
+`begin()` (a reimplementation of the vanilla begin flow, not the original function
+pointer) that keeps GaelGunStore's character guard but runs without `pcall`.
+
+**Scope:** this targets `GaelGunStore_B42` only. The legacy pack
+(`GaelGunStore_Leagacy`, Workshop `3623297453`) is **not supported**.
+
+**Trade-off:** while GaelGunStore is active, the patch replaces whatever `begin()` is
+installed with the fallback. If another mod had legitimately wrapped
+`ISBaseTimedAction:begin()`, that wrapper is dropped — an accepted trade-off, since
+removing GaelGunStore's call-frame corruption takes priority.
 
 ## 1. Server (GCP Ubuntu 24.04 LTS)
 
-1. Copy the mod folder to the server profile's `mods/` directory:
+1. Copy the mod folder to the server profile's `mods/` directory, keeping the
+   **Build 42 layout** intact:
 
    ```
    ~/Zomboid/mods/GaelGunStoreCompat/
+     common/                                       # empty companion folder (lowercase!)
+     42/
+       mod.info
+       media/lua/client/GGSCompat_TimedActionFix.lua
    ```
 
-   (The folder must contain `mod.info` and `media/lua/client/GGSCompat_TimedActionFix.lua`.)
+   On the Linux server the `common` folder name **must be lowercase**. Do not flatten this
+   into `mods/GaelGunStoreCompat/mod.info` + `media/` — the B42 loader may not detect a flat
+   local mod. (Tip: build the folder with `tools/package-ggscompat.sh`, which verifies the
+   layout for you.)
 
 2. Edit the server config (e.g. `~/Zomboid/Server/servertest.ini`). On the `Mods=`
    line, add `GaelGunStoreCompat` **after** `GaelGunStore_B42`:
@@ -49,14 +66,21 @@ A dedicated server only auto-downloads **Workshop** mods to clients. Because thi
 patch is a local mod, **each player must install it manually** or they will fail
 the mod check / not get the fix:
 
-1. Copy the same `GaelGunStoreCompat` folder to:
+1. Copy the same `GaelGunStoreCompat` folder (with its `common/` and `42/` subfolders) to:
 
    ```
    %USERPROFILE%\Zomboid\mods\GaelGunStoreCompat\
+     common\
+     42\
+       mod.info
+       media\lua\client\GGSCompat_TimedActionFix.lua
    ```
 
 2. Enable it in the in-game Mods menu (or it is pulled in by the server's mod list
-   on join). Make sure it loads **after** GaelGunStore.
+   on join). Make sure it loads **after** GaelGunStore. If the mod does not appear in the
+   B42 mod list at all, the layout is wrong — recheck the `42/` + `common/` structure above.
+   (As a last-resort fallback some mods also place a copy of `mod.info` at the mod root, like
+   CommonSenseReborn does; try that only if the correct layout still won't show.)
 
 > If you would rather not hand it to every player, upload this folder as your own
 > Workshop item and add its id to `WorkshopItems=` instead. The mod contents are
@@ -73,18 +97,19 @@ In the client console / `console.txt` you should see, once per session:
 If GaelGunStore is **not** enabled, the patch stays inert and prints nothing — that
 is expected.
 
-## 4. Legacy GaelGunStore build
+Behavioral check (no patch vs patch): the GaelGunStore bug makes **gates/doors open then
+immediately close on `E` press**, and other mods' timed actions (Run and Reload, Fast Knifing,
+Vehicle Repair Overhaul, Project Cook, etc.) throw `callFrame ... null` / `ReturnValues.put`
+errors after a GaelGunStore action. Your collection already includes **errorMagnifier**
+(`2896041179`), which shows those errors on-screen — they should disappear once the patch is
+active. See [`collection-notes.md`](collection-notes.md) for the full breakdown.
 
-If your server runs the legacy pack (`GaelGunStore_Leagacy`, Workshop `3623297453`)
-instead of `GaelGunStore_B42`, edit `mod.info` and change the require line to match:
+**Load order:** always keep `GaelGunStoreCompat` **after** `GaelGunStore_B42` in the
+`Mods=` line explicitly — `Mods=...;GaelGunStore_B42;GaelGunStoreCompat`. The
+`require=GaelGunStore_B42` field in `mod.info` is only a backup safety net; do not rely
+on a load-order sorter alone, especially while you are debugging.
 
-```
-require=GaelGunStore_Leagacy
-```
-
-The runtime fix itself already checks for both `GaelGunStore_B42` and `GaelGunStore`.
-
-## 5. Linux case-sensitivity (only if you see missing textures/sounds)
+## 4. Linux case-sensitivity (only if you see missing textures/sounds)
 
 This patch's own files are all lowercase-safe, so it never triggers the Linux
 case problem. But other gun mods in the collection might. If the **server** log
@@ -101,3 +126,8 @@ tools/pz-lowercase-fix.sh --apply ~/Zomboid/Workshop/<id>
 
 It only adds lowercase symlinks (never renames or deletes), so it is safe against
 Steam Workshop re-downloads. Re-run after a mod update if needed.
+
+Limitation: the scan only fixes the case where the **real file/folder name contains
+uppercase** and the mod references it in lowercase (real `AnimSets` → ref `animsets`).
+The reverse (real name already lowercase, reference uses uppercase) is not detected by
+the scan and needs a log-driven alias instead.

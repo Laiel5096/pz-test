@@ -3,15 +3,22 @@
 # pz-lowercase-fix.sh
 #
 # Project Zomboid on Linux is case-sensitive about asset paths; Windows is not.
-# A mod that ships a file as "Foo.png" but references it as "foo.png" (or vice
-# versa) loads fine on a Windows client but fails on a Linux/Ubuntu server with
-# missing icons, pink/black textures, missing sounds, or "file not found" spam.
+# A mod that ships a file as "Foo.png" but references it as "foo.png" loads fine on
+# a Windows client but fails on a Linux/Ubuntu server with missing icons, pink/black
+# textures, missing sounds, or "file not found" spam.
 #
 # This helper scans a mod directory and creates LOWERCASE SYMLINK ALIASES for any
 # file or directory whose name contains uppercase letters, so that lowercased
 # references resolve. It does NOT rename or delete anything (update-safe against
 # Steam Workshop re-downloads). It is idempotent and runs as a dry-run unless you
 # pass --apply.
+#
+# DIRECTION / LIMITATION: this only fixes the case where the REAL name contains
+# uppercase and the mod REFERENCES it in lowercase (real "AnimSets" -> ref
+# "animsets"). The reverse (real name already lowercase, reference uses uppercase:
+# real "animsets" -> ref "AnimSets") is NOT detected by this scan, because the scan
+# cannot know which uppercased spelling a script expects. For that direction, derive
+# the exact missing paths from the server log and create those aliases specifically.
 #
 # Typical targets on the GCP Ubuntu 24.04 server:
 #   ~/Zomboid/Workshop/<id>

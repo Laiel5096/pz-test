@@ -1,0 +1,7 @@
+name=GaelGunStore TimedAction Stabilizer
+id=GaelGunStoreCompat
+description=Stabilizes global timed-action errors caused by GaelGunStore_B42's unsafe ISBaseTimedAction:begin wrapper. Does NOT resolve firearm/ammo/loot/item-ID conflicts. Build 42 only.
+author=laiel5096
+modversion=1.2
+versionMin=42.17
+require=GaelGunStore_B42
